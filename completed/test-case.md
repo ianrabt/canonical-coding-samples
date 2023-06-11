@@ -32,4 +32,18 @@ Run: `ping 10.0.0.20` on host0 and `ping 10.0.0.10` and verify they can reach ea
 To use iperf3, we must open port 5201 (udp and tcp) on host0 (arbitrarily picked to be the server).  If using vanilla Ubuntu, run `ufw allow 5201` to configure the firewall.  This can also directly be modified using `iptables`, to work on more distros.
 
 ### Bandwidth test -- use the same script to automate these steps
-On host0, run `iperf3 -s` and on host1, run `iperf3 -c 10.0.0.10` to test TCP bandwidth and `iperf3 -c 10.0.0.10 -u` to test UDP bandwidth.  The "Bandwidth" column will display test results -- verify 200Gb/s was achieved (the script can automate this check as well, perhaps by averaging all the results).
+On host0, run `iperf3 -s` and on host1, run `iperf3 -c 10.0.0.10` to test TCP bandwidth and `iperf3 -c 10.0.0.10 -u` to test UDP bandwidth.  The "Bandwidth" column will display test results -- verify 200Gb/s was achieved (the script can automate this check as well, by checking the maximum speed from every test).
+
+### Teardown
+On host0:
+1. `ip address delete dev en0`
+2. `ip link set dev en0 down`
+3. Remove physical hardware after powering down the system.
+
+On host1 (similarly):
+1. `ip address delete dev en1`
+2. `ip link set dev en1 down`
+3. Remove physical hardware after powering down the system.
+
+## Additional notes
+It is possible to install `en0` and `en1` on the same test bench, instead of using two separate computers!  However, care must be taken with the routing to ensure `lo` won't be used by the kernel -- as it can identify the two IPs are assigned to two interfaces on the same host, and might not actually transmit any data using the physical interfaces!  I'm not actually sure what Linux would do in this scenario.  I'd need to test real hardware to see how to set something like that up.  However, it shouldn't be too difficult to use `ip route` to change the routing table, and check what would happen using, say, `route get 10.0.0.10` to see what device would be used -- and make sure that device is the physical Ethernet device.
