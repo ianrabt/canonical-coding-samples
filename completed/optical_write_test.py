@@ -11,13 +11,16 @@ import shutil
 import subprocess
 import time
 
-TEMP_DIR         = '/tmp/optical-test'
-ISO_NAME         = 'optical-test.iso'
+TEMP_DIR = '/tmp/optical-test'
+ISO_NAME = 'optical-test.iso'
 SAMPLE_FILE_PATH = '/usr/share/example-content/'
-SAMPLE_FILE      = 'Ubuntu_Free_Culture_Showcase'
-MD5SUM_FILE      = 'optical_test.md5'
-START_DIR        = os.getcwd()
-mount_pt         = None
+SAMPLE_FILE = 'Ubuntu_Free_Culture_Showcase'
+MD5SUM_FILE = 'optical_test.md5'
+START_DIR = os.getcwd()
+# mutable global, set after a successful mount -- used to allow for unmounting
+# after an exception, during cleanup
+mount_pt = None
+
 
 def create_working_dirs(temp_dir=TEMP_DIR):
     '''Creates and cd's to TEMP_DIR.'''
@@ -33,23 +36,24 @@ def create_working_dirs(temp_dir=TEMP_DIR):
     except Exception as e:
         raise RuntimeError('Failed to create working directories') from e
 
+
 def get_sample_data(sample_file_path=SAMPLE_FILE_PATH,
                     sample_file=SAMPLE_FILE,
                     temp_dir=TEMP_DIR):
     try:
         # Get our sample files
         print(f'Getting sample files from {sample_file_path} ...')
-        # copy2 to preserve attributes (as in previous behavior using `cp -a ...`)
+        # copy2 to preserve attributes
+        # (as in previous behavior using `cp -a ...`)
         shutil.copy2(os.path.join(sample_file_path, sample_file), temp_dir)
-        #TODO cp -a $SAMPLE_FILE_PATH/$SAMPLE_FILE $TEMP_DIR
     except Exception as e:
         raise RuntimeError('Failed to copy sample data') from e
+
 
 def generate_md5(sample_file=SAMPLE_FILE):
     try:
         # Generate the md5sum
         print("Generating md5sums of sample files ...")
-        #CUR_DIR=$PWD
         cwd = os.getcwd()
         os.chdir(SAMPLE_FILE)
         md5sum_file_fullpath = os.path.join(TEMP_DIR, MD5SUM_FILE)
@@ -61,15 +65,17 @@ def generate_md5(sample_file=SAMPLE_FILE):
             # function...
             check_md5(md5sum_file_fullpath)
         finally:
-            # ...but we always want to return to the previous directory, even if
-            # check_md5 fails.
+            # ...but we always want to return to the previous directory, even
+            # if check_md5 fails.
             os.chdir(cwd)
     except Exception as e:
         raise RuntimeError('Failed to generate initial md5') from e
 
+
 def check_md5(md5sum_filepath):
     print("Checking md5sums ...")
     subprocess.run(["md5sum", "-c", md5sum_filepath], check=True)
+
 
 def generate_iso():
     try:
@@ -90,6 +96,7 @@ def generate_iso():
         )
     except Exception as e:
         raise RuntimeError('Failed to create ISO image') from e
+
 
 def burn_iso(optical_drive, optical_type):
     try:
@@ -123,13 +130,14 @@ def burn_iso(optical_drive, optical_type):
     except Exception as e:
         raise RuntimeError('Failed to burn ISO image') from e
 
+
 def check_disk(optical_drive):
     '''Modifies global mount_pt.'''
     global mount_pt
     try:
-        TIMEOUT=300
-        INTERVAL=3
-        sleep_count=0
+        TIMEOUT = 300
+        INTERVAL = 3
+        sleep_count = 0
 
         # Give the tester up to 5 minutes to reload the newly created CD/DVD
         print("Waiting up to 5 minutes for drive to be mounted ...")
@@ -145,8 +153,8 @@ def check_disk(optical_drive):
                 print("Drive appears to be mounted now")
                 break
 
-            # If they exceed the timeout limit, make a best effort to load the tray
-            # in the next steps
+            # If they exceed the timeout limit, make a best effort to load the
+            # tray in the next steps
             if sleep_count >= TIMEOUT:
                 print("WARNING: TIMEOUT Exceeded and no mount detected!")
                 break
@@ -174,11 +182,12 @@ def check_disk(optical_drive):
             os.mkdir(mount_pt)
 
             print("Mounting disk to mount point ...")
-            mount_subprocess = subprocess.run(['mount', optical_drive, mount_pt])
+            mount_subprocess = subprocess.run(
+                ['mount', optical_drive, mount_pt]
+            )
             if mount_subprocess.returncode != 0:
                 error = f"ERROR: Unable to re-mount {optical_drive}!"
-                #TODO stderr
-                print(error)
+                print(error, file=sys.stderr)
                 raise RuntimeError(error)
         print("Copying files from ISO ...")
         subprocess.run('cp $MOUNT_PT/* $TEMP_DIR', shell=True)
@@ -202,6 +211,7 @@ def cleanup(optical_drive):
 
     print("Ejecting spent media ...")
     subprocess.run(['eject', optical_drive])
+
 
 def main():
     optical_drive = '/dev/sr0'
@@ -234,7 +244,7 @@ def main():
         print("Attempting to clean up ...")
         exit_code = 1
     finally:
-          # always attempt cleanup (even on success)
+        # always attempt cleanup (even on success)
         try:
             cleanup(optical_drive)
         except RuntimeError:
@@ -242,6 +252,7 @@ def main():
             exit_code = 1
         finally:
             sys.exit(exit_code)
+
 
 if __name__ == "__main__":
     main()
