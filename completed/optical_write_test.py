@@ -56,7 +56,7 @@ def generate_md5(sample_file=SAMPLE_FILE):
         # Generate the md5sum
         print("Generating md5sums of sample files ...")
         cwd = os.getcwd()
-        os.chdir(SAMPLE_FILE)
+        os.chdir(sample_file)
         md5sum_file_fullpath = os.path.join(TEMP_DIR, MD5SUM_FILE)
 
         run(f'md5sum -- * > {md5sum_file_fullpath}', shell=True)
