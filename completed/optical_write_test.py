@@ -8,8 +8,9 @@
 import sys
 import os
 import shutil
-import subprocess
+from subprocess import run
 import time
+
 
 TEMP_DIR = '/tmp/optical-test'
 ISO_NAME = 'optical-test.iso'
@@ -58,7 +59,7 @@ def generate_md5(sample_file=SAMPLE_FILE):
         os.chdir(SAMPLE_FILE)
         md5sum_file_fullpath = os.path.join(TEMP_DIR, MD5SUM_FILE)
 
-        subprocess.run(f'md5sum -- * > {md5sum_file_fullpath}', shell=True)
+        run(f'md5sum -- * > {md5sum_file_fullpath}', shell=True)
         try:
             # Check the sums for paranoia sake -- throws exception for nonzero
             # return, which we do not catch until the very end of this
@@ -74,14 +75,14 @@ def generate_md5(sample_file=SAMPLE_FILE):
 
 def check_md5(md5sum_filepath):
     print("Checking md5sums ...")
-    subprocess.run(["md5sum", "-c", md5sum_filepath], check=True)
+    run(["md5sum", "-c", md5sum_filepath], check=True)
 
 
 def generate_iso():
     try:
         # Generate ISO image
         print("Creating ISO Image ...")
-        subprocess.run(
+        run(
             [
                 'genisoimage',
                 '-input-charset',
@@ -105,7 +106,7 @@ def burn_iso(optical_drive, optical_type):
         time.sleep(10)
         print("Beginning image burn ...")
         if optical_type == 'cd':
-            subprocess.run(
+            run(
                 [
                     'wodim',
                     '-eject',
@@ -115,7 +116,7 @@ def burn_iso(optical_drive, optical_type):
                 check=True
             )
         elif optical_type in ('dvd', 'bd'):
-            subprocess.run(
+            run(
                 [
                     'growisofs',
                     '-dvd-compat',
@@ -145,7 +146,7 @@ def check_disk(optical_drive):
             time.sleep(INTERVAL)
             sleep_count = sleep_count + INTERVAL
 
-            mount = subprocess.run(
+            mount = run(
                 f'mount "{optical_drive}" 2>&1 | grep -E -q "already mounted"',
                 shell=True
             )
@@ -162,13 +163,13 @@ def check_disk(optical_drive):
         print("Deleting original data files ...")
         shutil.rmtree(SAMPLE_FILE)
         optical_drive_is_mounted = (
-            subprocess.run(
+            run(
                 f'mount | grep -q "{optical_drive}"',
                 shell=True
             ).returncode == 0
         )
         if optical_drive_is_mounted:
-            mount_pt = subprocess.run(
+            mount_pt = run(
                 # TODO string notation
                 f"mount | grep \"{optical_drive}\" | " + "awk '{print $3}'",
                 shell=True,
@@ -182,7 +183,7 @@ def check_disk(optical_drive):
             os.mkdir(mount_pt)
 
             print("Mounting disk to mount point ...")
-            mount_subprocess = subprocess.run(
+            mount_subprocess = run(
                 ['mount', optical_drive, mount_pt]
             )
             if mount_subprocess.returncode != 0:
@@ -190,8 +191,8 @@ def check_disk(optical_drive):
                 print(error, file=sys.stderr)
                 raise RuntimeError(error)
         print("Copying files from ISO ...")
-        subprocess.run('cp $MOUNT_PT/* $TEMP_DIR', shell=True)
-        subprocess.run(
+        run('cp $MOUNT_PT/* $TEMP_DIR', shell=True)
+        run(
             ['check_md5', MD5SUM_FILE],
             check=True
         )
@@ -206,11 +207,11 @@ def cleanup(optical_drive):
 
     print("Cleaning up ...")
     if mount_pt:
-        subprocess.run(['unmount', mount_pt])
+        run(['unmount', mount_pt])
     shutil.rmtree(TEMP_DIR)
 
     print("Ejecting spent media ...")
-    subprocess.run(['eject', optical_drive])
+    run(['eject', optical_drive])
 
 
 def main():
@@ -219,7 +220,7 @@ def main():
     try:
         device_path = sys.argv[1]
         # `[:-1]` removes the trailing b'\n' from the byte string.
-        optical_drive = subprocess.run(
+        optical_drive = run(
               ['readlink', '-f', device_path],
               capture_output=True
           ).stdout[:-1]
