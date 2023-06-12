@@ -170,8 +170,7 @@ def check_disk(optical_drive):
         )
         if optical_drive_is_mounted:
             mount_pt = run(
-                # TODO string notation
-                f"mount | grep \"{optical_drive}\" | " + "awk '{print $3}'",
+                f'mount | grep "{optical_drive}" | ' + "awk '{print $3}'",
                 shell=True,
                 capture_output=True
             ).stdout
@@ -210,11 +209,11 @@ def cleanup(optical_drive):
 
     print("Cleaning up ...")
     if mount_pt:
-        run(['unmount', mount_pt])
+        run(['unmount', mount_pt], check=True)
     shutil.rmtree(TEMP_DIR)
 
     print("Ejecting spent media ...")
-    run(['eject', optical_drive])
+    run(['eject', optical_drive], check=True)
 
 
 def main():
