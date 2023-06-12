@@ -180,7 +180,10 @@ def check_disk(optical_drive):
             print(f"Attempting best effort to mount {optical_drive} on my own")
             mount_pt = os.path.join(TEMP_DIR, 'mnt')
             print(f"Creating temp mount point: {mount_pt} ...")
-            os.mkdir(mount_pt)
+            try:
+                os.mkdir(mount_pt)
+            except FileExistsError:
+                pass
 
             print("Mounting disk to mount point ...")
             mount_subprocess = run(
